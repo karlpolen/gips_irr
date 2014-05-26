@@ -1,18 +1,24 @@
 irr.z=function(cf.z,gips=FALSE) {
-  irr.freq=365
-  if(!is.zoo(cf.z)) {warning("cash flow must be zoo object"); return(NA)}
-  if("Date"!=class(time(cf.z))) {warning("need Date class for zoo index"); return(NA)}
+  irr.freq=1
+  #if("Date"!=class(time(cf.z))) {warning("need Date class for zoo index"); return(NA)}
   if(any(is.na(cf.z))) return(NA)
   if(length(cf.z)<=1) return(NA)
   if(all(cf.z<=0)) return(NA)
   if(all(cf.z>=0)) return(NA)
   if(sum(cf.z)==0) return (0)
+  if(!is.zoo(cf.z)) {
+    timediff=-1+1:length(cf.z)
+  } else {
+    timeline=time(cf.z)
+    timediff=as.numeric(timeline-timeline[1])
+    if ("Date"== class(timeline)) irr.freq=365
+  }
   if (sum(cf.z)<0) {
     rangehi=0
     rangelo=-.01
     i=0
     # low range on search for negative IRR is -100%
-    while(i<100&(sign(npv.znoadjust(rangehi,cf.z))==sign(npv.znoadjust(rangelo,cf.z)))) {
+    while(i<100&(sign(npv.znoadjust(rangehi,cf.z,irr.freq,timediff))==sign(npv.znoadjust(rangelo,cf.z,irr.freq,timediff)))) {
       rangehi=rangelo
       rangelo=rangelo-.01
       i=i+1
@@ -21,24 +27,24 @@ irr.z=function(cf.z,gips=FALSE) {
       rangelo=0
       i=0
       # while hi range on search for positive IRR is 100,000%
-      while(i<100000&(sign(npv.znoadjust(rangehi,cf.z))==sign(npv.znoadjust(rangelo,cf.z)))) {
+      while(i<100000&(sign(npv.znoadjust(rangehi,cf.z,irr.freq,timediff))==sign(npv.znoadjust(rangelo,cf.z,irr.freq,timediff)))) {
         rangelo=rangehi
         rangehi=rangehi+.01
         i=i+1
       }}
-  npv1=npv.znoadjust(rangelo,cf.z)
-  npv2=npv.znoadjust(rangehi,cf.z)
+  npv1=npv.znoadjust(rangelo,cf.z,irr.freq,timediff)
+  npv2=npv.znoadjust(rangehi,cf.z,irr.freq,timediff)
   if (sign(npv1)==sign(npv2)) return(NA)
   cf.n=as.numeric(cf.z)
   #calculate with uniroot if cash flow starts negative and ends positive otherwise do your own search
   if((cf.n[1]<0)&(cf.n[length(cf.n)]>0)) {
-    ans=uniroot(npv.znoadjust,c(rangelo,rangehi),cf=cf.z)
+    ans=uniroot(npv.znoadjust,c(rangelo,rangehi),cf=cf.z,freq=irr.freq,tdiff=timediff)
     apr=ans$root } else {
       int1=rangelo
       int2=rangehi
       for (i in 1:40) {
         inta=mean(c(int1,int2))
-        npva=npv.znoadjust(inta,cf.z)
+        npva=npv.znoadjust(inta,cf.z,irr.freq,timediff)
         if(sign(npva)==sign(npv1)) {
           int1=inta
           npv1=npva
@@ -58,11 +64,7 @@ irr.z=function(cf.z,gips=FALSE) {
   }
   return (ans)
 }
-npv.znoadjust=function(i,cf.z) {
-  freq=365
-  if(!is.zoo(cf.z)) {warning("cash flow must be zoo object"); return(NA)}
-  if("Date"!=class(time(cf.z))) {warning("need Date class for zoo index"); return(NA)}
-  tdif=as.numeric(index(cf.z)-(index(cf.z)[1]))
-  d=(1+(i/freq))^tdif
+npv.znoadjust=function(i,cf.z,freq,tdiff) {
+  d=(1+(i/freq))^tdiff
   sum(cf.z/d)
 }
