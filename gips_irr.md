@@ -7,9 +7,7 @@ output:
 ---
 
 
-```{r echo=FALSE}
-source('gips irr.r')
-```
+
 The IRR is a financial metric that presents a variety of problems in practical implementation.  This post explores some issues and solutions.
 
 The IRR is a discount rate that causes the net present value of a cash flow to be zero.  The formula for the NPV is
@@ -43,24 +41,59 @@ This approach is, of course, not mathematically rigorous but adequate for contra
 
 The function is called `irr.z` and accepts a `zoo` object of daily cash flows as its argument.  Here is an example of its use.
 
-```{r, message=FALSE, warning=FALSE}
+
+```r
 require(zoo)
 require(lubridate)
 testcf<- zoo(c(-1,rep(.1/12,119),(1+(.1/12))),as.Date('2014-1-1')+months(0:119))
 head(testcf)
+```
+
+```
+##   2014-01-01   2014-02-01   2014-03-01   2014-04-01   2014-05-01 
+## -1.000000000  0.008333333  0.008333333  0.008333333  0.008333333 
+##   2014-06-01 
+##  0.008333333
+```
+
+```r
 tail(testcf)
+```
+
+```
+##  2023-07-01  2023-08-01  2023-09-01  2023-10-01  2023-11-01  2023-12-01 
+## 0.008333333 0.008333333 0.008333333 0.008333333 0.008333333 0.008333333
+```
+
+```r
 irr.z(testcf)
+```
+
+```
+## [1] -0.001684584
 ```
 
 Another issue that arises with IRR calculations is rules related to reporting investment performance results.  Most institutional investment managers are required to report under a set of rules known as the Global Investment Performance Standards ("GIPS").  These rules are promulgated and adopted with the goal of ensuring consistency in reporting investment outcomes.  GIPS provides a rule that IRRs for investments lasting less than a year should not be "annualized".  
 
-Let's say you make an investment and sell it for a 10% profit one month later.  The conventional way of calculating the return would be $-1+1.1^{12}$ , or `r round(100*(-1+1.1^12))` % (assuming 30 day months and 360 days in a year). Under GIPS, you are required to report this project as having an IRR of 10%.  
+Let's say you make an investment and sell it for a 10% profit one month later.  The conventional way of calculating the return would be $-1+1.1^{12}$ , or 214 % (assuming 30 day months and 360 days in a year). Under GIPS, you are required to report this project as having an IRR of 10%.  
 
 Here is an illustration of how to use the function to calculate GIPS compliant IRRs.
-```{r}
+
+```r
 testcf2<- zoo(c(-1,1.1),as.Date(c("2014-1-1","2014-2-1")))
 irr.z(testcf2)
+```
+
+```
+## [1] 2.071609
+```
+
+```r
 irr.z(testcf2,gips=TRUE)
+```
+
+```
+## [1] 0.1000001
 ```
 
 The formula for calculating the GIPS IRR is:
@@ -71,8 +104,8 @@ where $irr$ refers to an IRR calculated the regular way and $days$ refers to the
 
 
 Here is the code for the functions discussed above.  
-```{r}
 
+```r
 irr.z=function(cf.z,gips=FALSE) {
   irr.freq=1
   #if("Date"!=class(time(cf.z))) {warning("need Date class for zoo index"); return(NA)}
@@ -143,5 +176,4 @@ npv.znoadjust=function(i,cf.z,freq,tdiff) {
   d=(1+(i/freq))^tdiff
   sum(cf.z/d)
 }
-
 ```
